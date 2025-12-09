@@ -1,36 +1,23 @@
-from streamlit_cookies_manager import EncryptedCookieManager
-
-cookies = EncryptedCookieManager(prefix="finance_app", password="your-secret-key")
-if not cookies.ready():
-    st.stop()
-
-# Check cookie
-if "authenticated" in cookies and cookies["authenticated"] == "true":
-    st.session_state["authenticated"] = True
-    st.session_state["username"] = cookies.get("username")
-
-# On login success
-cookies["authenticated"] = "true"
-cookies["username"] = username
-cookies.save()
-
-# On logout
-cookies["authenticated"] = "false"
-cookies.save()
-st.session_state["authenticated"] = False
-st.session_state["username"] = None
-
-
 import streamlit as st
 import pandas as pd
 from datetime import date
+from streamlit_cookies_manager import EncryptedCookieManager
+
+# ---------------- COOKIE MANAGER ----------------
+cookies = EncryptedCookieManager(
+    prefix="finance_app", 
+    password="your-secret-key"   # change this to a strong secret
+)
+if not cookies.ready():
+    st.stop()
 
 # ---------------- LOGIN CHECK ----------------
 def check_login():
+    # Restore from cookie
     if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
+        st.session_state["authenticated"] = cookies.get("authenticated") == "true"
     if "username" not in st.session_state:
-        st.session_state["username"] = None
+        st.session_state["username"] = cookies.get("username")
 
     if not st.session_state["authenticated"]:
         st.sidebar.header("🔑 Login")
@@ -43,6 +30,9 @@ def check_login():
             if username in users and password == users[username]:
                 st.session_state["authenticated"] = True
                 st.session_state["username"] = username
+                cookies["authenticated"] = "true"
+                cookies["username"] = username
+                cookies.save()
                 st.success(f"Login successful ✅ Welcome, {username}")
                 st.rerun()
             else:
@@ -55,6 +45,9 @@ def check_login():
         if st.sidebar.button("Logout"):
             st.session_state["authenticated"] = False
             st.session_state["username"] = None
+            cookies["authenticated"] = "false"
+            cookies["username"] = ""
+            cookies.save()
             st.rerun()
 
 check_login()
@@ -79,10 +72,9 @@ with tab1:
         col1, col2, col3 = st.columns(3)
         with col1:
             entry_type = st.selectbox("Type", ["Income", "Usage"])
-            category = st.selectbox("Category", st.session_state["categories"])
+            category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category")
         with col2:
             item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item")
-            # item = st.text_input("Item")
             amount = st.number_input("Amount", min_value=0.0, step=0.01)
         with col3:
             entry_date = st.date_input("Date", value=date.today())
@@ -121,8 +113,7 @@ with tab1:
             row = df.iloc[edit_index]
             with st.form("edit_form"):
                 new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
-                category = st.selectbox("Category", st.session_state["categories"])
-                # new_category = st.text_input("Category", value=row["Category"])
+                new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
                 new_item = st.text_input("Item", value=row["Item"])
                 new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
                 new_date = st.date_input("Date", value=row["Date"].date())
@@ -164,68 +155,37 @@ with tab1:
         st.info("No entries yet.")
 
 # ---------------- CONFIG PAGE ----------------
-st.header("📂 Category Manager")
-with st.form("category_form", clear_on_submit=True):
-    new_category = st.text_input("Add new category")
-    add_cat = st.form_submit_button("Add Category")
-    if add_cat and new_category.strip():
-        st.session_state["categories"].append(new_category.strip())
-        st.success(f"Category '{new_category.strip()}' added ✅")
-
-if st.session_state["categories"]:
-    st.subheader("🧾 Existing Categories")
-    for i, cat in enumerate(st.session_state["categories"]):
-        col1, col2 = st.columns([4, 1])
-        col1.write(f"- {cat}")
-        if col2.button("❌", key=f"del_cat_{i}"):
-            st.session_state["categories"].pop(i)
-            st.rerun()
-else:
-    st.info("No categories defined yet.")
-
-st.header("📦 Item Manager")
-with st.form("item_form", clear_on_submit=True):
-    new_item = st.text_input("Add new item")
-    add_item = st.form_submit_button("Add Item")
-    if add_item and new_item.strip():
-        st.session_state["items"].append(new_item.strip())
-        st.success(f"Item '{new_item.strip()}' added ✅")
-
-if st.session_state["items"]:
-    st.subheader("🧾 Existing Items")
-    for i, itm in enumerate(st.session_state["items"]):
-        col1, col2 = st.columns([4, 1])
-        col1.write(f"- {itm}")
-        if col2.button("❌", key=f"del_item_{i}"):
-            st.session_state["items"].pop(i)
-            st.rerun()
-else:
-    st.info("No items defined yet.")
-
 with tab2:
-    st.header("📂 Category Entry")
-    st.write("Define categories/items for consistency.")
+    st.header("📂 Category Manager")
+    with st.form("category_form", clear_on_submit=True):
+        new_category = st.text_input("Add new category")
+        add_cat = st.form_submit_button("Add Category")
+        if add_cat and new_category.strip():
+            st.session_state["categories"].append(new_category.strip())
+            st.success(f"Category '{new_category.strip()}' added ✅")
 
-    st.header("💰 Budget Setup")
-    with st.form("budget_form", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            budget_category = st.selectbox("Category", st.session_state["categories"])
-            #budget_category = st.text_input("Category")
-        with col2:
-            budget_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item")
-            #budget_item = st.text_input("Item")
-        with col3:
-            budget_amount = st.number_input("Budget amount", min_value=0.0, step=0.01)
+    if st.session_state["categories"]:
+        st.subheader("🧾 Existing Categories")
+        for i, cat in enumerate(st.session_state["categories"]):
+            col1, col2 = st.columns([4, 1])
+            col1.write(f"- {cat}")
+            if col2.button("❌", key=f"del_cat_{i}"):
+                st.session_state["categories"].pop(i)
+                st.rerun()
+    else:
+        st.info("No categories defined yet.")
 
-        budget_submit = st.form_submit_button("Save Budget")
-        if budget_submit:
-            new_budget = {"Category":budget_category.strip(),"Item":budget_item.strip(),"Budget":float(budget_amount)}
-            st.session_state["budgets"] = pd.concat([st.session_state["budgets"], pd.DataFrame([new_budget])], ignore_index=True)
-            st.success("Budget saved ✅")
+    st.header("📦 Item Manager")
+    with st.form("item_form", clear_on_submit=True):
+        new_item = st.text_input("Add new item")
+        add_item = st.form_submit_button("Add Item")
+        if add_item and new_item.strip():
+            st.session_state["items"].append(new_item.strip())
+            st.success(f"Item '{new_item.strip()}' added ✅")
 
-    if not st.session_state["budgets"].empty:
-        st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
-
-
-
+    if st.session_state["items"]:
+        st.subheader("🧾 Existing Items")
+        for i, itm in enumerate(st.session_state["items"]):
+            col1, col2 = st.columns([4, 1])
+            col1.write(f"- {itm}")
+            if col2.button("❌", key=f"del_item_{i}
