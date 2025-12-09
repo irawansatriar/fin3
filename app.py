@@ -40,7 +40,7 @@ check_login()
 # --- Your finance app code continues below ---
 st.title("💰 Personal Finance Tracker")
 
-import streamlit as st
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
@@ -194,4 +194,5 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
 
