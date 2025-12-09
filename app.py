@@ -36,6 +36,31 @@ check_login()
 # --- Your finance app code continues below ---
 st.title("💰 Fin-Track")
 
+st.subheader("📌 Set Budgets")
+
+with st.form("budget_form", clear_on_submit=True):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        budget_category = st.text_input("Category")
+    with col2:
+        budget_item = st.text_input("Item")
+    with col3:
+        budget_amount = st.number_input("Budget amount", min_value=0.0, step=0.01)
+
+    budget_submit = st.form_submit_button("Save Budget")
+    if budget_submit:
+        new_budget = {
+            "Category": budget_category.strip(),
+            "Item": budget_item.strip(),
+            "Budget": float(budget_amount),
+        }
+        if "budgets" not in st.session_state:
+            st.session_state["budgets"] = pd.DataFrame(columns=["Category", "Item", "Budget"])
+        st.session_state["budgets"] = pd.concat([st.session_state["budgets"], pd.DataFrame([new_budget])], ignore_index=True)
+        st.success("Budget saved")
+
+
+
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -171,6 +196,28 @@ with colB:
     else:
         st.info("No usage to chart.")
 
+st.subheader("📊 Budget vs Usage")
+
+if "budgets" in st.session_state and not st.session_state["budgets"].empty:
+    usage_df = st.session_state["data"]
+    usage_df = usage_df[usage_df["Type"] == "Usage"]
+
+    usage_summary = usage_df.groupby(["Category", "Description"])["Amount"].sum().reset_index()
+    usage_summary.columns = ["Category", "Item", "Usage"]
+
+    budget_df = st.session_state["budgets"]
+    merged = pd.merge(budget_df, usage_summary, on=["Category", "Item"], how="left").fillna({"Usage": 0})
+    merged["Remaining"] = merged["Budget"] - merged["Usage"]
+    merged["Progress"] = merged["Usage"] / merged["Budget"]
+
+    for _, row in merged.iterrows():
+        st.write(f"**{row['Category']} - {row['Item']}**")
+        st.progress(min(row["Progress"], 1.0))
+        st.caption(f"Used: {row['Usage']:.2f} / Budget: {row['Budget']:.2f} → Remaining: {row['Remaining']:.2f}")
+else:
+    st.info("No budgets defined yet.")
+
+
 # ---------- Export ----------
 def to_excel(df_export: pd.DataFrame) -> bytes:
     output = BytesIO()
@@ -188,6 +235,16 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
+if "budgets" in st.session_state:
+    budget_excel = to_excel(st.session_state["budgets"])
+    st.download_button(
+        label="📥 Export budget table to Excel",
+        data=budget_excel,
+        file_name="budget_table.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
 
 
 
