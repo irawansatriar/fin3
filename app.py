@@ -63,36 +63,9 @@ if "items" not in st.session_state:
     st.session_state["items"] = []
 
 # ---------------- TABS ----------------
-tab1, tab2, tab3 = st.tabs(["Dashboard","📥 Entry Page", "⚙️ Config Page"])
+tab1, tab2 = st.tabs(["📥 Entry Page", "⚙️ Config Page"])
 
- # --- Summary ---
-with tab1:
-    summary = df.groupby("Type")["Amount"].sum()
-    st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
-    st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
-    st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
-
-    # --- Budget vs Usage ---
-    st.subheader("Budget vs Usage")
-    if not st.session_state["budgets"].empty:
-        usage_summary = df[df["Type"] == "Usage"].groupby(["Category", "Item"])["Amount"].sum().reset_index()
-        merged = (
-            pd.merge(st.session_state["budgets"], usage_summary, on=["Category", "Item"], how="left")
-            .fillna({"Amount": 0})
-            .rename(columns={"Amount": "Usage"})
-        )
-        merged["Remaining"] = merged["Budget"] - merged["Usage"]
-        merged["Progress"] = merged["Usage"] / merged["Budget"]
-
-        for _, r in merged.iterrows():
-            st.write(f"**{r['Category']} - {r['Item']}**")
-            st.progress(min(float(r["Progress"]), 1.0))
-            st.caption(f"Used: {r['Usage']:.2f} / Budget: {r['Budget']:.2f} → Remaining: {r['Remaining']:.2f}")
-    else:
-        st.info("No budgets defined yet.")
-
-
-
+ 
 # ---------------- ENTRY PAGE ----------------
 with tab2:
     st.header("➕ Add Income / Usage Entry")
@@ -199,6 +172,33 @@ if not df.empty:
                 st.session_state["edit_row_index"] = None
                 st.info("Edit cancelled")
                 st.rerun()
+
+# --- Summary ---
+
+    summary = df.groupby("Type")["Amount"].sum()
+    st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
+    st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
+    st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
+
+    # --- Budget vs Usage ---
+    st.subheader("Budget vs Usage")
+    if not st.session_state["budgets"].empty:
+        usage_summary = df[df["Type"] == "Usage"].groupby(["Category", "Item"])["Amount"].sum().reset_index()
+        merged = (
+            pd.merge(st.session_state["budgets"], usage_summary, on=["Category", "Item"], how="left")
+            .fillna({"Amount": 0})
+            .rename(columns={"Amount": "Usage"})
+        )
+        merged["Remaining"] = merged["Budget"] - merged["Usage"]
+        merged["Progress"] = merged["Usage"] / merged["Budget"]
+
+        for _, r in merged.iterrows():
+            st.write(f"**{r['Category']} - {r['Item']}**")
+            st.progress(min(float(r["Progress"]), 1.0))
+            st.caption(f"Used: {r['Usage']:.2f} / Budget: {r['Budget']:.2f} → Remaining: {r['Remaining']:.2f}")
+    else:
+        st.info("No budgets defined yet.")
+
 else:
     st.info("No entries yet.")
          
@@ -266,6 +266,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
