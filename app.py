@@ -67,7 +67,7 @@ tab1, tab2 = st.tabs(["📥 Entry Page", "⚙️ Config Page"])
 
  
 # ---------------- ENTRY PAGE ----------------
-with tab2:
+with tab1:
     st.header("➕ Add Income / Usage Entry")
     with st.form("entry_form", clear_on_submit=True):
         col1, col2, col3 = st.columns(3)
@@ -204,7 +204,7 @@ else:
          
 
 # ---------------- CONFIG PAGE ----------------
-with tab3:
+with tab2:
     st.header("📂 Category Manager")
     with st.form("category_form", clear_on_submit=True):
         new_category = st.text_input("Add new category")
@@ -266,6 +266,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
