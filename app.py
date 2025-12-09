@@ -32,7 +32,7 @@ def check_login():
         if st.sidebar.button("Logout"):
             st.session_state["authenticated"] = False
             st.session_state["username"] = None
-            st.experimental_rerun()  # Restart app to show login form again
+            st.rerun()  # Restart app to show login form again
 
 # Call login check before main app
 check_login()
@@ -194,5 +194,6 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
 
 
