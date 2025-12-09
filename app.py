@@ -188,8 +188,9 @@ with tab2:
         for i, itm in enumerate(st.session_state["items"]):
             col1, col2 = st.columns([4, 1])
             col1.write(f"- {itm}")
-            if col2.button("❌", key=f"del_item_{i}")
-            #if col2.button("❌", key=f"del_item_{i}:
+            if col2.button("❌", key=f"del_item_{i}"):
+          
+
 
 
 
