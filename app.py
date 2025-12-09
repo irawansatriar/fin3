@@ -177,13 +177,13 @@ with tab2:
 
     st.header("📦 Item Manager")
     with st.form("item_form", clear_on_submit=True):
-        new_item = st.text_input("Add new item")
-        add_item = st.form_submit_button("Add Item")
-        if add_item and new_item.strip():
-            st.session_state["items"].append(new_item.strip())
-            st.success(f"Item '{new_item.strip()}' added ✅")
+    new_item = st.text_input("Add new item")
+    add_item = st.form_submit_button("Add Item")
+    if add_item and new_item.strip():
+        st.session_state["items"].append(new_item.strip())
+        st.success(f"Item '{new_item.strip()}' added ✅")
 
-    if st.session_state["items"]:
+if st.session_state["items"]:
     st.subheader("🧾 Existing Items")
     for i, itm in enumerate(st.session_state["items"]):
         col1, col2 = st.columns([4, 1])
@@ -191,11 +191,6 @@ with tab2:
         if col2.button("❌", key=f"del_item_{i}"):
             st.session_state["items"].pop(i)
             st.rerun()
-    else:
+else:
     st.info("No items defined yet.")
-          
-
-
-
-
-
+    
