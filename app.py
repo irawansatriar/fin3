@@ -126,60 +126,30 @@ with tab2:
             st.success("Entry added ✅")
             st.rerun()
 
-    st.header("📋 Transaction List")
+    st.header("📋 Transaction Table")
     df = st.session_state["data"]
+
     if not df.empty:
-        if "edit_row_index" not in st.session_state:
-            st.session_state["edit_row_index"] = None
+        # Editable table
+        edited_df = st.data_editor(
+            df,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="transaction_editor"
+        )
 
-        for i in range(len(df)):
-            row = df.iloc[i]
-            cols = st.columns([6,1,1])
-            with cols[0]:
-                st.write(f"**[{i}] {row['Date'].date()} | {row['Type']} | {row['Category']} | {row['Item']} | {row['Amount']:.2f}**")
-                if str(row.get("Description","")).strip():
-                    st.caption(f"✎ {row['Description']}")
-            with cols[1]:
-                if st.button("✏️", key=f"edit_btn_{i}"):
-                    st.session_state["edit_row_index"] = i
-            with cols[2]:
-                if st.button("🗑️", key=f"del_btn_{i}"):
-                    st.session_state["data"] = df.drop(df.index[i]).reset_index(drop=True)
-                    st.success(f"Deleted row {i} ✅")
-                    st.rerun()
+        # Detect changes
+        if not edited_df.equals(df):
+            st.session_state["data"] = edited_df
+            st.success("Changes saved ✅")
 
-        if st.session_state["edit_row_index"] is not None:
-            idx = st.session_state["edit_row_index"]
-            row = st.session_state["data"].iloc[idx]
-            st.divider()
-            st.subheader(f"✏️ Edit entry [row {idx}]")
-            with st.form("inline_edit_form"):
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
-                    new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
-                with c2:
-                    new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
-                    new_amount = st.number_input("Amount", value=float(row["Amount"]), min_value=0.0, step=0.01)
-                with c3:
-                    new_date = st.date_input("Date", value=row["Date"].date())
-                    new_description = st.text_input("Description", value=str(row["Description"]))
-                save_edit = st.form_submit_button("Save changes")
-                cancel_edit = st.form_submit_button("Cancel")
-                if save_edit:
-                    st.session_state["data"].at[idx,"Date"] = pd.to_datetime(new_date)
-                    st.session_state["data"].at[idx,"Type"] = new_type
-                    st.session_state["data"].at[idx,"Category"] = new_category.strip()
-                    st.session_state["data"].at[idx,"Item"] = new_item.strip()
-                    st.session_state["data"].at[idx,"Amount"] = float(new_amount)
-                    st.session_state["data"].at[idx,"Description"] = new_description.strip()
-                    st.session_state["edit_row_index"] = None
-                    st.success(f"Row {idx} updated ✅")
-                    st.rerun()
-                if cancel_edit:
-                    st.session_state["edit_row_index"] = None
-                    st.info("Edit cancelled")
-                    st.rerun()
+        # Delete row by selecting index
+        st.subheader("🗑️ Delete Transaction")
+        delete_index = st.number_input("Row index to delete", min_value=0, max_value=len(df)-1, step=1)
+        if st.button("Delete Selected Row"):
+            st.session_state["data"] = df.drop(df.index[delete_index]).reset_index(drop=True)
+            st.success(f"Row {delete_index} deleted ✅")
+            st.rerun()
     else:
         st.info("No transactions yet.")
          
@@ -254,6 +224,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
