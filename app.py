@@ -155,25 +155,7 @@ with tab2:
             st.session_state["data"] = edited_df.reset_index(drop=True)
             st.success("Table changes saved ✅")
 
-            import io
-            st.divider()
-            st.subheader("📤 Export Transactions")
-            
-            if not st.session_state["data"].empty:
-                # Create an in-memory Excel file
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                    st.session_state["data"].to_excel(writer, index=False, sheet_name="Transactions")
-                excel_data = output.getvalue()
-            
-                st.download_button(
-                    label="⬇️ Download as Excel",
-                    data=excel_data,
-                    file_name="transactions.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-            else:
-                st.info("No transactions to export.")
+          
 
         st.divider()
         st.subheader("🔧 Row actions")
@@ -243,7 +225,27 @@ with tab2:
     else:
         st.info("No transactions yet.")
 
-         
+
+  import io
+            st.divider()
+            st.subheader("📤 Export Transactions")
+            
+            if not st.session_state["data"].empty:
+                # Create an in-memory Excel file
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    st.session_state["data"].to_excel(writer, index=False, sheet_name="Transactions")
+                excel_data = output.getvalue()
+            
+                st.download_button(
+                    label="⬇️ Download as Excel",
+                    data=excel_data,
+                    file_name="transactions.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            else:
+                st.info("No transactions to export.")
+
 
 # ---------------- CONFIG PAGE ----------------
 with tab3:
@@ -315,6 +317,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
