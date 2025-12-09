@@ -195,8 +195,29 @@ with tab2:
     else:
         st.info("No items defined yet.")
 
+    st.header("💰 Budget Setup")
+    with st.form("budget_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            budget_category = st.selectbox("Category", st.session_state["categories"])
+            #budget_category = st.text_input("Category")
+        with col2:
+            budget_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item")
+            #budget_item = st.text_input("Item")
+        with col3:
+            budget_amount = st.number_input("Budget amount", min_value=0.0, step=0.01)
+
+        budget_submit = st.form_submit_button("Save Budget")
+        if budget_submit:
+            new_budget = {"Category":budget_category.strip(),"Item":budget_item.strip(),"Budget":float(budget_amount)}
+            st.session_state["budgets"] = pd.concat([st.session_state["budgets"], pd.DataFrame([new_budget])], ignore_index=True)
+            st.success("Budget saved ✅")
+
+    if not st.session_state["budgets"].empty:
+        st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
+
     
-    
+
 
 
 
