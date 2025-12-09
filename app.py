@@ -6,7 +6,7 @@ from streamlit_cookies_manager import EncryptedCookieManager
 # ---------------- COOKIE MANAGER ----------------
 cookies = EncryptedCookieManager(
     prefix="finance_app", 
-    password="your-secret-key"   # change this to a strong secret
+    password="Bi@sanyseperti"   # change this to a strong secret
 )
 if not cookies.ready():
     st.stop()
@@ -189,3 +189,4 @@ with tab2:
             col1, col2 = st.columns([4, 1])
             col1.write(f"- {itm}")
             if col2.button("❌", key=f"del_item_{i}
+
