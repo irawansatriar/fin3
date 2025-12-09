@@ -114,7 +114,7 @@ with tab1:
             with st.form("edit_form"):
                 new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
                 new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
-                new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", , value=row["Item"])
+                new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
                 new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
                 new_date = st.date_input("Date", value=row["Date"].date())
                 new_description = st.text_input("Description", value=row["Description"])
@@ -217,6 +217,7 @@ with tab2:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
