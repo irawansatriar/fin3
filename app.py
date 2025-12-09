@@ -1,9 +1,13 @@
 import streamlit as st
 
 def check_login():
+    # Initialize session state
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
+    if "username" not in st.session_state:
+        st.session_state["username"] = None
 
+    # If not logged in, show login form
     if not st.session_state["authenticated"]:
         st.sidebar.header("🔑 Login")
         username = st.sidebar.text_input("Username")
@@ -14,12 +18,21 @@ def check_login():
             users = st.secrets["users"]
             if username in users and password == users[username]:
                 st.session_state["authenticated"] = True
-                st.success("Login successful ✅")
+                st.session_state["username"] = username
+                st.success(f"Login successful ✅ Welcome, {username}")
             else:
                 st.error("Invalid username or password")
 
         if not st.session_state["authenticated"]:
             st.stop()  # Prevent rest of app from loading until login
+
+    # If logged in, show logout option
+    else:
+        st.sidebar.write(f"👋 Logged in as **{st.session_state['username']}**")
+        if st.sidebar.button("Logout"):
+            st.session_state["authenticated"] = False
+            st.session_state["username"] = None
+            st.experimental_rerun()  # Restart app to show login form again
 
 # Call login check before main app
 check_login()
@@ -181,3 +194,4 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
