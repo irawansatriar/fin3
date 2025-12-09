@@ -1,3 +1,26 @@
+from streamlit_cookies_manager import EncryptedCookieManager
+
+cookies = EncryptedCookieManager(prefix="finance_app", password="your-secret-key")
+if not cookies.ready():
+    st.stop()
+
+# Check cookie
+if "authenticated" in cookies and cookies["authenticated"] == "true":
+    st.session_state["authenticated"] = True
+    st.session_state["username"] = cookies.get("username")
+
+# On login success
+cookies["authenticated"] = "true"
+cookies["username"] = username
+cookies.save()
+
+# On logout
+cookies["authenticated"] = "false"
+cookies.save()
+st.session_state["authenticated"] = False
+st.session_state["username"] = None
+
+
 import streamlit as st
 import pandas as pd
 from datetime import date
@@ -203,5 +226,6 @@ with tab2:
 
     if not st.session_state["budgets"].empty:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
+
 
 
