@@ -90,8 +90,7 @@ with tab1:
             st.caption(f"Used: {r['Usage']:.2f} / Budget: {r['Budget']:.2f} → Remaining: {r['Remaining']:.2f}")
     else:
         st.info("No budgets defined yet.")
-else:
-    st.info("No entries yet.")
+
 
 
 # ---------------- ENTRY PAGE ----------------
@@ -200,7 +199,8 @@ if not df.empty:
                 st.session_state["edit_row_index"] = None
                 st.info("Edit cancelled")
                 st.rerun()
-
+else:
+    st.info("No entries yet.")
          
 
 # ---------------- CONFIG PAGE ----------------
@@ -266,6 +266,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
