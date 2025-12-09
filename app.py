@@ -1,4 +1,33 @@
 import streamlit as st
+
+def check_login():
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    if not st.session_state["authenticated"]:
+        st.sidebar.header("🔑 Login")
+        username = st.sidebar.text_input("Username")
+        password = st.sidebar.text_input("Password", type="password")
+        login_btn = st.sidebar.button("Login")
+
+        if login_btn:
+            users = st.secrets["users"]
+            if username in users and password == users[username]:
+                st.session_state["authenticated"] = True
+                st.success("Login successful ✅")
+            else:
+                st.error("Invalid username or password")
+
+        if not st.session_state["authenticated"]:
+            st.stop()  # Prevent rest of app from loading until login
+
+# Call login check before main app
+check_login()
+
+# --- Your finance app code continues below ---
+st.title("💰 Personal Finance Tracker")
+
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
@@ -149,5 +178,6 @@ st.download_button(
     file_name="personal_finance_data.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
+
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
