@@ -93,65 +93,113 @@ with tab1:
             st.session_state["data"] = pd.concat([st.session_state["data"], pd.DataFrame([new_entry])], ignore_index=True)
             st.success("Entry added ✅")
 
-    st.header("📊 Dashboard / Summary / Analysis")
-    df = st.session_state["data"]
-    if not df.empty:
-        st.dataframe(df.reset_index(drop=True), use_container_width=True)
+        st.header("📊 Dashboard / Summary / Analysis")
+df = st.session_state["data"]
 
-       # --- Delete Entry ---
-st.subheader("🗑️ Delete Entry")
-delete_index = st.number_input("Row index to delete", min_value=0, max_value=len(df)-1, step=1)
-if st.button("Delete Selected Entry"):
-    st.session_state["data"] = df.drop(df.index[delete_index]).reset_index(drop=True)
-    st.success("Entry deleted ✅")
-    st.rerun()
+if not df.empty:
+    st.dataframe(df.reset_index(drop=True), use_container_width=True)
 
-# --- Modify Entry ---
-st.subheader("✏️ Modify Entry")
-edit_index = st.number_input("Row index to edit", min_value=0, max_value=len(df)-1, step=1, key="edit_index")
-if st.button("Load Entry for Edit"):
-    row = df.iloc[edit_index]
-    with st.form("edit_form"):
-        new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
-        new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
-        new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
-        new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
-        new_date = st.date_input("Date", value=row["Date"].date())
-        new_description = st.text_input("Description", value=row["Description"])
-        save_edit = st.form_submit_button("Save Changes")
-        if save_edit:
-            st.session_state["data"].at[edit_index, "Date"] = pd.to_datetime(new_date)
-            st.session_state["data"].at[edit_index, "Type"] = new_type
-            st.session_state["data"].at[edit_index, "Category"] = new_category.strip()
-            st.session_state["data"].at[edit_index, "Item"] = new_item.strip()
-            st.session_state["data"].at[edit_index, "Amount"] = float(new_amount)
-            st.session_state["data"].at[edit_index, "Description"] = new_description.strip()
-            st.success("Entry updated ✅")
-            st.rerun()
+    # --- Row actions: edit & delete with icons ---
+    st.subheader("🔧 Actions")
+    st.caption("Use the icons beside each row to edit or delete.")
 
-        # Summary
-        summary = df.groupby("Type")["Amount"].sum()
-        st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
-        st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
-        st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
+    # make sure an edit target exists in session
+    if "edit_row_index" not in st.session_state:
+        st.session_state["edit_row_index"] = None
 
-        # Budget vs Usage
-        st.subheader("Budget vs Usage")
-        if not st.session_state["budgets"].empty:
-            usage_summary = df[df["Type"]=="Usage"].groupby(["Category","Item"])["Amount"].sum().reset_index()
-            merged = pd.merge(st.session_state["budgets"], usage_summary, on=["Category","Item"], how="left").fillna({"Amount":0})
-            merged.rename(columns={"Amount":"Usage"}, inplace=True)
-            merged["Remaining"] = merged["Budget"] - merged["Usage"]
-            merged["Progress"] = merged["Usage"]/merged["Budget"]
+    # render rows with action buttons
+    for i in range(len(df)):
+        row = df.iloc[i]
+        cols = st.columns([6, 1, 1])  # text area, edit icon, delete icon
+        with cols[0]:
+            st.write(
+                f"**[{i}] {row['Date'].date()} | {row['Type']} | {row['Category']} | {row['Item']} | {row['Amount']:.2f}**"
+            )
+            if str(row.get("Description", "")).strip():
+                st.caption(f"✎ {row['Description']}")
+        with cols[1]:
+            if st.button("✏️", key=f"edit_btn_{i}"):
+                st.session_state["edit_row_index"] = i
+        with cols[2]:
+            if st.button("🗑️", key=f"del_btn_{i}"):
+                st.session_state["data"] = df.drop(df.index[i]).reset_index(drop=True)
+                st.success(f"Deleted row {i} ✅")
+                st.rerun()
 
-            for _, row in merged.iterrows():
-                st.write(f"**{row['Category']} - {row['Item']}**")
-                st.progress(min(row["Progress"],1.0))
-                st.caption(f"Used: {row['Usage']:.2f} / Budget: {row['Budget']:.2f} → Remaining: {row['Remaining']:.2f}")
-        else:
-            st.info("No budgets defined yet.")
+    # --- Edit form for the selected row ---
+    if st.session_state["edit_row_index"] is not None:
+        idx = st.session_state["edit_row_index"]
+        row = st.session_state["data"].iloc[idx]
+        st.divider()
+        st.subheader(f"✏️ Edit entry [row {idx}]")
+
+        with st.form("inline_edit_form"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                new_type = st.selectbox("Type", ["Income", "Usage"], index=["Income", "Usage"].index(row["Type"]))
+                new_category = (
+                    st.selectbox("Category", st.session_state["categories"], index=max(0, st.session_state["categories"].index(row["Category"])) )
+                    if st.session_state["categories"] and row["Category"] in st.session_state["categories"]
+                    else st.text_input("Category", value=row["Category"])
+                )
+            with c2:
+                new_item = (
+                    st.selectbox("Item", st.session_state["items"], index=max(0, st.session_state["items"].index(row["Item"])) )
+                    if st.session_state["items"] and row["Item"] in st.session_state["items"]
+                    else st.text_input("Item", value=row["Item"])
+                )
+                new_amount = st.number_input("Amount", value=float(row["Amount"]), min_value=0.0, step=0.01)
+            with c3:
+                new_date = st.date_input("Date", value=row["Date"].date())
+                new_description = st.text_input("Description", value=str(row["Description"]))
+
+            save_edit = st.form_submit_button("Save changes")
+            cancel_edit = st.form_submit_button("Cancel")
+
+            if save_edit:
+                st.session_state["data"].at[idx, "Date"] = pd.to_datetime(new_date)
+                st.session_state["data"].at[idx, "Type"] = new_type
+                st.session_state["data"].at[idx, "Category"] = new_category.strip()
+                st.session_state["data"].at[idx, "Item"] = new_item.strip()
+                st.session_state["data"].at[idx, "Amount"] = float(new_amount)
+                st.session_state["data"].at[idx, "Description"] = new_description.strip()
+                st.session_state["edit_row_index"] = None
+                st.success(f"Row {idx} updated ✅")
+                st.rerun()
+
+            if cancel_edit:
+                st.session_state["edit_row_index"] = None
+                st.info("Edit cancelled")
+                st.rerun()
+
+    # --- Summary ---
+    summary = df.groupby("Type")["Amount"].sum()
+    st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
+    st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
+    st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
+
+    # --- Budget vs Usage ---
+    st.subheader("Budget vs Usage")
+    if not st.session_state["budgets"].empty:
+        usage_summary = df[df["Type"] == "Usage"].groupby(["Category", "Item"])["Amount"].sum().reset_index()
+        merged = (
+            pd.merge(st.session_state["budgets"], usage_summary, on=["Category", "Item"], how="left")
+            .fillna({"Amount": 0})
+            .rename(columns={"Amount": "Usage"})
+        )
+        merged["Remaining"] = merged["Budget"] - merged["Usage"]
+        merged["Progress"] = merged["Usage"] / merged["Budget"]
+
+        for _, r in merged.iterrows():
+            st.write(f"**{r['Category']} - {r['Item']}**")
+            st.progress(min(float(r["Progress"]), 1.0))
+            st.caption(f"Used: {r['Usage']:.2f} / Budget: {r['Budget']:.2f} → Remaining: {r['Remaining']:.2f}")
     else:
-        st.info("No entries yet.")
+        st.info("No budgets defined yet.")
+else:
+    st.info("No entries yet.")
+
+       
 
 # ---------------- CONFIG PAGE ----------------
 with tab2:
@@ -216,6 +264,7 @@ with tab2:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
