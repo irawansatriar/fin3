@@ -41,6 +41,8 @@ if "data" not in st.session_state:
     st.session_state["data"] = pd.DataFrame(columns=["Date","Type","Category","Item","Amount","Description"])
 if "budgets" not in st.session_state:
     st.session_state["budgets"] = pd.DataFrame(columns=["Category","Item","Budget"])
+if "categories" not in st.session_state:
+    st.session_state["categories"] = []
 
 # ---------------- TABS ----------------
 tab1, tab2 = st.tabs(["📥 Entry Page", "⚙️ Config Page"])
@@ -52,7 +54,7 @@ with tab1:
         col1, col2, col3 = st.columns(3)
         with col1:
             entry_type = st.selectbox("Type", ["Income", "Usage"])
-            category = st.text_input("Category")
+            category = st.selectbox("Category", st.session_state["categories"])
         with col2:
             item = st.text_input("Item")
             amount = st.number_input("Amount", min_value=0.0, step=0.01)
@@ -93,7 +95,8 @@ with tab1:
             row = df.iloc[edit_index]
             with st.form("edit_form"):
                 new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
-                new_category = st.text_input("Category", value=row["Category"])
+                category = st.selectbox("Category", st.session_state["categories"])
+                # new_category = st.text_input("Category", value=row["Category"])
                 new_item = st.text_input("Item", value=row["Item"])
                 new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
                 new_date = st.date_input("Date", value=row["Date"].date())
@@ -135,6 +138,25 @@ with tab1:
         st.info("No entries yet.")
 
 # ---------------- CONFIG PAGE ----------------
+st.header("📂 Category Manager")
+with st.form("category_form", clear_on_submit=True):
+    new_category = st.text_input("Add new category")
+    add_cat = st.form_submit_button("Add Category")
+    if add_cat and new_category.strip():
+        st.session_state["categories"].append(new_category.strip())
+        st.success(f"Category '{new_category.strip()}' added ✅")
+
+if st.session_state["categories"]:
+    st.subheader("🧾 Existing Categories")
+    for i, cat in enumerate(st.session_state["categories"]):
+        col1, col2 = st.columns([4, 1])
+        col1.write(f"- {cat}")
+        if col2.button("❌", key=f"del_cat_{i}"):
+            st.session_state["categories"].pop(i)
+            st.rerun()
+else:
+    st.info("No categories defined yet.")
+
 with tab2:
     st.header("📂 Category Entry")
     st.write("Define categories/items for consistency.")
@@ -157,3 +179,4 @@ with tab2:
 
     if not st.session_state["budgets"].empty:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
+
