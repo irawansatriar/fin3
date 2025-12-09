@@ -63,12 +63,43 @@ if "items" not in st.session_state:
     st.session_state["items"] = []
 
 # ---------------- TABS ----------------
-tab1, tab2 = st.tabs(["📥 Entry Page", "⚙️ Config Page"])
+tab1, tab2, tab3 = st.tabs([
+    "📊 Dashboard / Summary",
+    "📥 Entry / Transaction",
+    "⚙️ Config"
+])
 
+# ---------------- DASHBOARD -----------------
+with tab1:
+    st.header("📊 Dashboard / Summary")
+    df = st.session_state["data"]
+
+    if not df.empty:
+        summary = df.groupby("Type")["Amount"].sum()
+        st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
+        st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
+        st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
+
+        st.subheader("Budget vs Usage")
+        if not st.session_state["budgets"].empty:
+            usage_summary = df[df["Type"]=="Usage"].groupby(["Category","Item"])["Amount"].sum().reset_index()
+            merged = pd.merge(st.session_state["budgets"], usage_summary, on=["Category","Item"], how="left").fillna({"Amount":0})
+            merged.rename(columns={"Amount":"Usage"}, inplace=True)
+            merged["Remaining"] = merged["Budget"] - merged["Usage"]
+            merged["Progress"] = merged["Usage"]/merged["Budget"]
+
+            for _, row in merged.iterrows():
+                st.write(f"**{row['Category']} - {row['Item']}**")
+                st.progress(min(row["Progress"],1.0))
+                st.caption(f"Used: {row['Usage']:.2f} / Budget: {row['Budget']:.2f} → Remaining: {row['Remaining']:.2f}")
+        else:
+            st.info("No budgets defined yet.")
+    else:
+        st.info("No entries yet.")
  
 # ---------------- ENTRY PAGE ----------------
-with tab1:
-    st.header("➕ Add Income / Usage Entry")
+with tab2:
+    st.header("➕ Add Transaction")
     with st.form("entry_form", clear_on_submit=True):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -93,118 +124,68 @@ with tab1:
             }
             st.session_state["data"] = pd.concat([st.session_state["data"], pd.DataFrame([new_entry])], ignore_index=True)
             st.success("Entry added ✅")
+            st.rerun()
 
-        st.header("📊 Dashboard / Summary / Analysis")
-df = st.session_state["data"]
+    st.header("📋 Transaction List")
+    df = st.session_state["data"]
+    if not df.empty:
+        if "edit_row_index" not in st.session_state:
+            st.session_state["edit_row_index"] = None
 
-if not df.empty:
-    st.dataframe(df.reset_index(drop=True), use_container_width=True)
+        for i in range(len(df)):
+            row = df.iloc[i]
+            cols = st.columns([6,1,1])
+            with cols[0]:
+                st.write(f"**[{i}] {row['Date'].date()} | {row['Type']} | {row['Category']} | {row['Item']} | {row['Amount']:.2f}**")
+                if str(row.get("Description","")).strip():
+                    st.caption(f"✎ {row['Description']}")
+            with cols[1]:
+                if st.button("✏️", key=f"edit_btn_{i}"):
+                    st.session_state["edit_row_index"] = i
+            with cols[2]:
+                if st.button("🗑️", key=f"del_btn_{i}"):
+                    st.session_state["data"] = df.drop(df.index[i]).reset_index(drop=True)
+                    st.success(f"Deleted row {i} ✅")
+                    st.rerun()
 
-    # --- Row actions: edit & delete with icons ---
-    st.subheader("🔧 Actions")
-    st.caption("Use the icons beside each row to edit or delete.")
-
-    # make sure an edit target exists in session
-    if "edit_row_index" not in st.session_state:
-        st.session_state["edit_row_index"] = None
-
-    # render rows with action buttons
-    for i in range(len(df)):
-        row = df.iloc[i]
-        cols = st.columns([6, 1, 1])  # text area, edit icon, delete icon
-        with cols[0]:
-            st.write(
-                f"**[{i}] {row['Date'].date()} | {row['Type']} | {row['Category']} | {row['Item']} | {row['Amount']:.2f}**"
-            )
-            if str(row.get("Description", "")).strip():
-                st.caption(f"✎ {row['Description']}")
-        with cols[1]:
-            if st.button("✏️", key=f"edit_btn_{i}"):
-                st.session_state["edit_row_index"] = i
-        with cols[2]:
-            if st.button("🗑️", key=f"del_btn_{i}"):
-                st.session_state["data"] = df.drop(df.index[i]).reset_index(drop=True)
-                st.success(f"Deleted row {i} ✅")
-                st.rerun()
-
-    # --- Edit form for the selected row ---
-    if st.session_state["edit_row_index"] is not None:
-        idx = st.session_state["edit_row_index"]
-        row = st.session_state["data"].iloc[idx]
-        st.divider()
-        st.subheader(f"✏️ Edit entry [row {idx}]")
-
-        with st.form("inline_edit_form"):
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                new_type = st.selectbox("Type", ["Income", "Usage"], index=["Income", "Usage"].index(row["Type"]))
-                new_category = (
-                    st.selectbox("Category", st.session_state["categories"], index=max(0, st.session_state["categories"].index(row["Category"])) )
-                    if st.session_state["categories"] and row["Category"] in st.session_state["categories"]
-                    else st.text_input("Category", value=row["Category"])
-                )
-            with c2:
-                new_item = (
-                    st.selectbox("Item", st.session_state["items"], index=max(0, st.session_state["items"].index(row["Item"])) )
-                    if st.session_state["items"] and row["Item"] in st.session_state["items"]
-                    else st.text_input("Item", value=row["Item"])
-                )
-                new_amount = st.number_input("Amount", value=float(row["Amount"]), min_value=0.0, step=0.01)
-            with c3:
-                new_date = st.date_input("Date", value=row["Date"].date())
-                new_description = st.text_input("Description", value=str(row["Description"]))
-
-            save_edit = st.form_submit_button("Save changes")
-            cancel_edit = st.form_submit_button("Cancel")
-
-            if save_edit:
-                st.session_state["data"].at[idx, "Date"] = pd.to_datetime(new_date)
-                st.session_state["data"].at[idx, "Type"] = new_type
-                st.session_state["data"].at[idx, "Category"] = new_category.strip()
-                st.session_state["data"].at[idx, "Item"] = new_item.strip()
-                st.session_state["data"].at[idx, "Amount"] = float(new_amount)
-                st.session_state["data"].at[idx, "Description"] = new_description.strip()
-                st.session_state["edit_row_index"] = None
-                st.success(f"Row {idx} updated ✅")
-                st.rerun()
-
-            if cancel_edit:
-                st.session_state["edit_row_index"] = None
-                st.info("Edit cancelled")
-                st.rerun()
-
-# --- Summary ---
-
-    summary = df.groupby("Type")["Amount"].sum()
-    st.metric("Total Income", f"{summary.get('Income',0):,.2f}")
-    st.metric("Total Usage", f"{summary.get('Usage',0):,.2f}")
-    st.metric("Net", f"{summary.get('Income',0)-summary.get('Usage',0):,.2f}")
-
-    # --- Budget vs Usage ---
-    st.subheader("Budget vs Usage")
-    if not st.session_state["budgets"].empty:
-        usage_summary = df[df["Type"] == "Usage"].groupby(["Category", "Item"])["Amount"].sum().reset_index()
-        merged = (
-            pd.merge(st.session_state["budgets"], usage_summary, on=["Category", "Item"], how="left")
-            .fillna({"Amount": 0})
-            .rename(columns={"Amount": "Usage"})
-        )
-        merged["Remaining"] = merged["Budget"] - merged["Usage"]
-        merged["Progress"] = merged["Usage"] / merged["Budget"]
-
-        for _, r in merged.iterrows():
-            st.write(f"**{r['Category']} - {r['Item']}**")
-            st.progress(min(float(r["Progress"]), 1.0))
-            st.caption(f"Used: {r['Usage']:.2f} / Budget: {r['Budget']:.2f} → Remaining: {r['Remaining']:.2f}")
+        if st.session_state["edit_row_index"] is not None:
+            idx = st.session_state["edit_row_index"]
+            row = st.session_state["data"].iloc[idx]
+            st.divider()
+            st.subheader(f"✏️ Edit entry [row {idx}]")
+            with st.form("inline_edit_form"):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
+                    new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
+                with c2:
+                    new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
+                    new_amount = st.number_input("Amount", value=float(row["Amount"]), min_value=0.0, step=0.01)
+                with c3:
+                    new_date = st.date_input("Date", value=row["Date"].date())
+                    new_description = st.text_input("Description", value=str(row["Description"]))
+                save_edit = st.form_submit_button("Save changes")
+                cancel_edit = st.form_submit_button("Cancel")
+                if save_edit:
+                    st.session_state["data"].at[idx,"Date"] = pd.to_datetime(new_date)
+                    st.session_state["data"].at[idx,"Type"] = new_type
+                    st.session_state["data"].at[idx,"Category"] = new_category.strip()
+                    st.session_state["data"].at[idx,"Item"] = new_item.strip()
+                    st.session_state["data"].at[idx,"Amount"] = float(new_amount)
+                    st.session_state["data"].at[idx,"Description"] = new_description.strip()
+                    st.session_state["edit_row_index"] = None
+                    st.success(f"Row {idx} updated ✅")
+                    st.rerun()
+                if cancel_edit:
+                    st.session_state["edit_row_index"] = None
+                    st.info("Edit cancelled")
+                    st.rerun()
     else:
-        st.info("No budgets defined yet.")
-
-else:
-    st.info("No entries yet.")
+        st.info("No transactions yet.")
          
 
 # ---------------- CONFIG PAGE ----------------
-with tab2:
+with tab3:
     st.header("📂 Category Manager")
     with st.form("category_form", clear_on_submit=True):
         new_category = st.text_input("Add new category")
@@ -214,16 +195,19 @@ with tab2:
             st.success(f"Category '{new_category.strip()}' added ✅")
 
     if st.session_state["categories"]:
-        st.subheader("🧾 Existing Categories")
         for i, cat in enumerate(st.session_state["categories"]):
-            col1, col2 = st.columns([4, 1])
+            col1, col2, col3 = st.columns([4,1,1])
             col1.write(f"- {cat}")
-            if col2.button("❌", key=f"del_cat_{i}"):
+            if col2.button("✏️", key=f"edit_cat_{i}"):
+                new_name = st.text_input("Rename category", value=cat, key=f"rename_cat_{i}")
+                if st.button("Save", key=f"save_cat_{i}"):
+                    st.session_state["categories"][i] = new_name.strip()
+                    st.rerun()
+            if col3.button("❌", key=f"del_cat_{i}"):
                 st.session_state["categories"].pop(i)
                 st.rerun()
     else:
         st.info("No categories defined yet.")
-
 
     st.header("📦 Item Manager")
     with st.form("item_form", clear_on_submit=True):
@@ -234,11 +218,15 @@ with tab2:
             st.success(f"Item '{new_item.strip()}' added ✅")
 
     if st.session_state["items"]:
-        st.subheader("🧾 Existing Items")
         for i, itm in enumerate(st.session_state["items"]):
-            col1, col2 = st.columns([4, 1])
+            col1, col2, col3 = st.columns([4,1,1])
             col1.write(f"- {itm}")
-            if col2.button("❌", key=f"del_itm_{i}"):
+            if col2.button("✏️", key=f"edit_item_{i}"):
+                new_name = st.text_input("Rename item", value=itm, key=f"rename_item_{i}")
+                if st.button("Save", key=f"save_item_{i}"):
+                    st.session_state["items"][i] = new_name.strip()
+                    st.rerun()
+            if col3.button("❌", key=f"del_item_{i}"):
                 st.session_state["items"].pop(i)
                 st.rerun()
     else:
@@ -266,6 +254,7 @@ with tab2:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
