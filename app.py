@@ -43,6 +43,8 @@ if "budgets" not in st.session_state:
     st.session_state["budgets"] = pd.DataFrame(columns=["Category","Item","Budget"])
 if "categories" not in st.session_state:
     st.session_state["categories"] = []
+if "items" not in st.session_state:
+    st.session_state["items"] = []
 
 # ---------------- TABS ----------------
 tab1, tab2 = st.tabs(["📥 Entry Page", "⚙️ Config Page"])
@@ -56,7 +58,8 @@ with tab1:
             entry_type = st.selectbox("Type", ["Income", "Usage"])
             category = st.selectbox("Category", st.session_state["categories"])
         with col2:
-            item = st.text_input("Item")
+            item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item")
+            # item = st.text_input("Item")
             amount = st.number_input("Amount", min_value=0.0, step=0.01)
         with col3:
             entry_date = st.date_input("Date", value=date.today())
@@ -157,6 +160,25 @@ if st.session_state["categories"]:
 else:
     st.info("No categories defined yet.")
 
+st.header("📦 Item Manager")
+with st.form("item_form", clear_on_submit=True):
+    new_item = st.text_input("Add new item")
+    add_item = st.form_submit_button("Add Item")
+    if add_item and new_item.strip():
+        st.session_state["items"].append(new_item.strip())
+        st.success(f"Item '{new_item.strip()}' added ✅")
+
+if st.session_state["items"]:
+    st.subheader("🧾 Existing Items")
+    for i, itm in enumerate(st.session_state["items"]):
+        col1, col2 = st.columns([4, 1])
+        col1.write(f"- {itm}")
+        if col2.button("❌", key=f"del_item_{i}"):
+            st.session_state["items"].pop(i)
+            st.rerun()
+else:
+    st.info("No items defined yet.")
+
 with tab2:
     st.header("📂 Category Entry")
     st.write("Define categories/items for consistency.")
@@ -165,9 +187,11 @@ with tab2:
     with st.form("budget_form", clear_on_submit=True):
         col1, col2, col3 = st.columns(3)
         with col1:
-            budget_category = st.text_input("Category")
+            budget_category = st.selectbox("Category", st.session_state["categories"])
+            #budget_category = st.text_input("Category")
         with col2:
-            budget_item = st.text_input("Item")
+            budget_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item")
+            #budget_item = st.text_input("Item")
         with col3:
             budget_amount = st.number_input("Budget amount", min_value=0.0, step=0.01)
 
@@ -179,4 +203,5 @@ with tab2:
 
     if not st.session_state["budgets"].empty:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
+
 
