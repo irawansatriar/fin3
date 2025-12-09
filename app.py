@@ -33,10 +33,8 @@ def check_login():
 
 check_login()
 
-st.title("💰 Personal Finance Tracker")
-
 # --- Your finance app code continues below ---
-st.title("💰 Personal Finance Tracker")
+st.title("💰 Fin-Track")
 
 
 import pandas as pd
@@ -62,8 +60,6 @@ def save_data(df):
 # ---------- Initialize ----------
 if "data" not in st.session_state:
     st.session_state["data"] = load_data()
-
-st.title("💰 Personal Finance Tracker")
 
 # ---------- Sidebar filters ----------
 with st.sidebar:
@@ -192,6 +188,7 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
 
 
 
