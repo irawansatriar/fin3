@@ -1,13 +1,11 @@
 import streamlit as st
 
 def check_login():
-    # Initialize session state
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
     if "username" not in st.session_state:
         st.session_state["username"] = None
 
-    # If not logged in, show login form
     if not st.session_state["authenticated"]:
         st.sidebar.header("🔑 Login")
         username = st.sidebar.text_input("Username")
@@ -24,18 +22,18 @@ def check_login():
                 st.error("Invalid username or password")
 
         if not st.session_state["authenticated"]:
-            st.stop()  # Prevent rest of app from loading until login
+            st.stop()
 
-    # If logged in, show logout option
     else:
         st.sidebar.write(f"👋 Logged in as **{st.session_state['username']}**")
         if st.sidebar.button("Logout"):
             st.session_state["authenticated"] = False
             st.session_state["username"] = None
-            st.rerun()  # Restart app to show login form again
+            st.rerun()  # ✅ use this instead of experimental_rerun
 
-# Call login check before main app
 check_login()
+
+st.title("💰 Personal Finance Tracker")
 
 # --- Your finance app code continues below ---
 st.title("💰 Personal Finance Tracker")
@@ -194,6 +192,7 @@ st.download_button(
 
 
 st.caption("Tip: Filters only affect the view and charts. The export includes the full dataset.")
+
 
 
 
