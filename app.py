@@ -98,37 +98,36 @@ with tab1:
     if not df.empty:
         st.dataframe(df.reset_index(drop=True), use_container_width=True)
 
-        # --- Delete Entry ---
-        st.subheader("🗑️ Delete Entry")
-        delete_index = st.number_input("Row index to delete", min_value=0, max_value=len(df)-1, step=1)
-        if st.button("Delete Selected Entry"):
-            st.session_state["data"].drop(delete_index, inplace=True)
-            st.session_state["data"].reset_index(drop=True, inplace=True)
-            st.success("Entry deleted ✅")
+       # --- Delete Entry ---
+st.subheader("🗑️ Delete Entry")
+delete_index = st.number_input("Row index to delete", min_value=0, max_value=len(df)-1, step=1)
+if st.button("Delete Selected Entry"):
+    st.session_state["data"] = df.drop(df.index[delete_index]).reset_index(drop=True)
+    st.success("Entry deleted ✅")
+    st.rerun()
 
-        # --- Modify Entry ---
-        st.subheader("✏️ Modify Entry")
-        edit_index = st.number_input("Row index to edit", min_value=0, max_value=len(df)-1, step=1, key="edit_index")
-        if st.button("Load Entry for Edit"):
-            row = df.iloc[edit_index]
-            with st.form("edit_form"):
-                new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
-                new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
-                new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
-                new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
-                new_date = st.date_input("Date", value=row["Date"].date())
-                new_description = st.text_input("Description", value=row["Description"])
-                save_edit = st.form_submit_button("Save Changes")
-                if save_edit:
-                    st.session_state["data"].iloc[edit_index] = [
-                        pd.to_datetime(new_date),
-                        new_type,
-                        new_category.strip(),
-                        new_item.strip(),
-                        float(new_amount),
-                        new_description.strip()
-                    ]
-                    st.success("Entry updated ✅")
+# --- Modify Entry ---
+st.subheader("✏️ Modify Entry")
+edit_index = st.number_input("Row index to edit", min_value=0, max_value=len(df)-1, step=1, key="edit_index")
+if st.button("Load Entry for Edit"):
+    row = df.iloc[edit_index]
+    with st.form("edit_form"):
+        new_type = st.selectbox("Type", ["Income","Usage"], index=["Income","Usage"].index(row["Type"]))
+        new_category = st.selectbox("Category", st.session_state["categories"]) if st.session_state["categories"] else st.text_input("Category", value=row["Category"])
+        new_item = st.selectbox("Item", st.session_state["items"]) if st.session_state["items"] else st.text_input("Item", value=row["Item"])
+        new_amount = st.number_input("Amount", value=row["Amount"], min_value=0.0, step=0.01)
+        new_date = st.date_input("Date", value=row["Date"].date())
+        new_description = st.text_input("Description", value=row["Description"])
+        save_edit = st.form_submit_button("Save Changes")
+        if save_edit:
+            st.session_state["data"].at[edit_index, "Date"] = pd.to_datetime(new_date)
+            st.session_state["data"].at[edit_index, "Type"] = new_type
+            st.session_state["data"].at[edit_index, "Category"] = new_category.strip()
+            st.session_state["data"].at[edit_index, "Item"] = new_item.strip()
+            st.session_state["data"].at[edit_index, "Amount"] = float(new_amount)
+            st.session_state["data"].at[edit_index, "Description"] = new_description.strip()
+            st.success("Entry updated ✅")
+            st.rerun()
 
         # Summary
         summary = df.groupby("Type")["Amount"].sum()
@@ -217,6 +216,7 @@ with tab2:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
