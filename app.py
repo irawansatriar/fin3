@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from streamlit_cookies_manager import EncryptedCookieManager
+import io
 
 # ---------------- COOKIE MANAGER ----------------
 cookies = EncryptedCookieManager(
@@ -155,7 +156,37 @@ with tab2:
             st.session_state["data"] = edited_df.reset_index(drop=True)
             st.success("Table changes saved ✅")
 
-          
+        st.divider()
+        st.subheader("📤 Export / Import")
+
+        # Export to Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            st.session_state["data"].to_excel(writer, index=False, sheet_name="Transactions")
+        excel_data = output.getvalue()
+        st.download_button(
+            label="⬇️ Download as Excel",
+            data=excel_data,
+            file_name="transactions.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        # Import from CSV
+        uploaded_file = st.file_uploader("Upload CSV to import", type=["csv"])
+        if uploaded_file is not None:
+            try:
+                new_df = pd.read_csv(uploaded_file)
+                required_cols = ["Date","Type","Category","Item","Amount","Description"]
+                if all(col in new_df.columns for col in required_cols):
+                    new_df["Date"] = pd.to_datetime(new_df["Date"], errors="coerce")
+                    st.session_state["data"] = pd.concat([st.session_state["data"], new_df], ignore_index=True)
+                    st.success("Transactions imported ✅")
+                    st.rerun()
+                else:
+                    st.error(f"CSV must contain columns: {', '.join(required_cols)}")
+            except Exception as e:
+                st.error(f"Error reading CSV: {e}")
+  
 
         st.divider()
         st.subheader("🔧 Row actions")
@@ -298,6 +329,7 @@ with tab3:
         st.dataframe(st.session_state["budgets"].reset_index(drop=True), use_container_width=True)
 
     
+
 
 
 
